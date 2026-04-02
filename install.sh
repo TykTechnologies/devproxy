@@ -41,6 +41,29 @@ fi
 echo "Using go binary:  $GO_BINARY"
 echo "Using npm binary: $NPM_BINARY"
 
+# --- Write ~/.devproxy config file (only on first install) ---
+DEVPROXY_CONFIG="$HOME/.devproxy"
+if [ -f "$DEVPROXY_CONFIG" ]; then
+  echo "Config already exists at $DEVPROXY_CONFIG — leaving it unchanged"
+else
+  cat > "$DEVPROXY_CONFIG" <<EOF
+# devproxy configuration — managed by install.sh
+# Edit this file to change tool versions or override runtime settings.
+
+CONTAINER_RUNTIME=
+
+GO_BINARY="${GO_BINARY}"
+NPM_BINARY="${NPM_BINARY}"
+
+GODEV_IMAGE=golang:1.25-alpine
+GODEV_CACHE_VOLUME=godev-modcache
+
+NODEDEV_IMAGE=node:24-alpine
+NODEDEV_CACHE_VOLUME=nodedev-npmcache
+EOF
+  echo "Wrote config to $DEVPROXY_CONFIG"
+fi
+
 # --- Download proxy scripts ---
 mkdir -p "$INSTALL_DIR"
 
@@ -58,9 +81,8 @@ chmod +x "$INSTALL_DIR/devproxy"
 
 # --- Write shell profile block (idempotent via markers) ---
 BLOCK="${MARKER_START}
-export GO_BINARY=\"${GO_BINARY}\"
-export NPM_BINARY=\"${NPM_BINARY}\"
 export PATH=\"${INSTALL_DIR}:\$PATH\"
+[ -f \"\$HOME/.devproxy\" ] && source \"\$HOME/.devproxy\"
 ${MARKER_END}"
 
 if grep -qF "$MARKER_START" "$PROFILE" 2>/dev/null; then
