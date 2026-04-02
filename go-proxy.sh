@@ -51,12 +51,23 @@ CACHE_VOLUME="${GODEV_CACHE_VOLUME:-godev-modcache}"
 TTY_FLAG=""
 [ -t 0 ] && TTY_FLAG="--tty"
 
+# Build extra volume flags from GODEV_EXTRA_VOLUMES (colon-separated host paths,
+# each mounted at the same absolute path inside the container — needed for replace directives)
+EXTRA_VOL_FLAGS=()
+if [ -n "${GODEV_EXTRA_VOLUMES:-}" ]; then
+  IFS=: read -ra _extra_vols <<< "$GODEV_EXTRA_VOLUMES"
+  for _vol in "${_extra_vols[@]}"; do
+    [ -n "$_vol" ] && EXTRA_VOL_FLAGS+=(--volume "${_vol}:${_vol}${RUNTIME_VOLOPT}")
+  done
+fi
+
 exec "$RUNTIME" run --rm \
   --interactive \
   ${TTY_FLAG} \
   --workdir "$(pwd)" \
   --volume "$(pwd):$(pwd)${RUNTIME_VOLOPT}" \
   --volume "${CACHE_VOLUME}:/root/go/pkg/mod${RUNTIME_VOLOPT}" \
+  "${EXTRA_VOL_FLAGS[@]+"${EXTRA_VOL_FLAGS[@]}"}" \
   --env GOPATH=/root/go \
   --env GOFLAGS="$("$GO_BINARY" env GOFLAGS)" \
   --env CGO_ENABLED="$("$GO_BINARY" env CGO_ENABLED)" \
