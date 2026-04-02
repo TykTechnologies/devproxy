@@ -23,7 +23,7 @@ MARKER_START="# >>> devproxy >>>"
 MARKER_END="# <<< devproxy <<<"
 
 # --- Remove existing proxies so they don't shadow the real binaries during detection ---
-rm -f "$INSTALL_DIR/go" "$INSTALL_DIR/npm" "$INSTALL_DIR/devproxy"
+rm -f "$INSTALL_DIR/go" "$INSTALL_DIR/npm" "$INSTALL_DIR/npx" "$INSTALL_DIR/devproxy"
 
 # --- Find the real binaries ---
 GO_BINARY="$(command -v go 2>/dev/null || true)"

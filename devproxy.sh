@@ -7,10 +7,13 @@
 
 set -euo pipefail
 
-INSTALL_URL="https://raw.githubusercontent.com/OWNER/REPO/main/install.sh"
+INSTALL_URL="${REPO_BASE_URL:-https://raw.githubusercontent.com/OWNER/REPO/main}/install.sh"
 INSTALL_DIR="$HOME/.local/bin/devproxy"
 MARKER_START="# >>> devproxy >>>"
 MARKER_END="# <<< devproxy <<<"
+
+# Load central config
+[ -f "$HOME/.devproxy" ] && source "$HOME/.devproxy"
 
 detect_profile() {
   case "${SHELL:-}" in
@@ -45,7 +48,7 @@ cmd_update() {
 
 cmd_uninstall() {
   echo "Removing proxy scripts..."
-  rm -f "$INSTALL_DIR/go" "$INSTALL_DIR/npm"
+  rm -f "$INSTALL_DIR/go" "$INSTALL_DIR/npm" "$INSTALL_DIR/npx" "$INSTALL_DIR/devproxy"
   rmdir "$INSTALL_DIR" 2>/dev/null && echo "Removed $INSTALL_DIR" || true
 
   PROFILE="$(detect_profile)"
