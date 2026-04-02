@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-print "Hello from go-proxy!"
+echo "Hello from npx-proxy!"

@@ -6,7 +6,7 @@
 set -euo pipefail
 
 # --- Configuration ---
-REPO_BASE_URL="https://raw.githubusercontent.com/OWNER/REPO/main"
+REPO_BASE_URL="${REPO_BASE_URL:-https://raw.githubusercontent.com/OWNER/REPO/main}"
 INSTALL_DIR="$HOME/.local/bin/devproxy"
 
 # --- Detect shell profile ---
@@ -68,12 +68,16 @@ fi
 mkdir -p "$INSTALL_DIR"
 
 echo "Downloading go proxy..."
-curl -fsSL "$REPO_BASE_URL/goproxy.sh" -o "$INSTALL_DIR/go"
+curl -fsSL "$REPO_BASE_URL/go-proxy.sh" -o "$INSTALL_DIR/go"
 chmod +x "$INSTALL_DIR/go"
 
 echo "Downloading npm proxy..."
-curl -fsSL "$REPO_BASE_URL/npmproxy.sh" -o "$INSTALL_DIR/npm"
+curl -fsSL "$REPO_BASE_URL/npm-proxy.sh" -o "$INSTALL_DIR/npm"
 chmod +x "$INSTALL_DIR/npm"
+
+echo "Downloading npx proxy..."
+curl -fsSL "$REPO_BASE_URL/npx-proxy.sh" -o "$INSTALL_DIR/npx"
+chmod +x "$INSTALL_DIR/npx"
 
 echo "Downloading devproxy manager..."
 curl -fsSL "$REPO_BASE_URL/devproxy.sh" -o "$INSTALL_DIR/devproxy"
@@ -87,11 +91,15 @@ ${MARKER_END}"
 
 if grep -qF "$MARKER_START" "$PROFILE" 2>/dev/null; then
   # Replace the existing block in-place
-  awk -v start="$MARKER_START" -v end="$MARKER_END" -v block="$BLOCK" '
-    $0 == start { print block; skip=1; next }
+  # Write block to a temp file — awk -v doesn't support newlines in variable values
+  BLOCK_FILE="$(mktemp)"
+  printf '%s\n' "$BLOCK" > "$BLOCK_FILE"
+  awk -v start="$MARKER_START" -v end="$MARKER_END" -v blockfile="$BLOCK_FILE" '
+    $0 == start { while ((getline line < blockfile) > 0) print line; skip=1; next }
     $0 == end   { skip=0; next }
     !skip        { print }
   ' "$PROFILE" > "$PROFILE.tmp" && mv "$PROFILE.tmp" "$PROFILE"
+  rm -f "$BLOCK_FILE"
   echo "Updated existing devproxy config in $PROFILE"
 else
   printf '\n%s\n' "$BLOCK" >> "$PROFILE"
