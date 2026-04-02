@@ -7,22 +7,23 @@ set -euo pipefail
 # Load central config (covers non-login shells: GoLand, CI, env -i contexts)
 [ -f "$HOME/.devproxy" ] && source "$HOME/.devproxy"
 
-# --- Local passthrough for safe, read-only subcommands ---
-case "${1:-}" in
-  env|help)
-    if [ -z "${GO_BINARY:-}" ]; then
-      echo "go-proxy: GO_BINARY is not set — run the install script first" >&2
-      exit 1
-    fi
-    exec "$GO_BINARY" "$@"
-    ;;
-esac
-
 # --- Validate required config ---
 if [ -z "${GO_BINARY:-}" ]; then
   echo "go-proxy: GO_BINARY is not set — run the install script first" >&2
   exit 1
 fi
+
+# --- Unsecure mode: bypass the container entirely ---
+if [ -n "${UNSECURE:-}" ]; then
+  exec "$GO_BINARY" "$@"
+fi
+
+# --- Local passthrough for safe, read-only subcommands ---
+case "${1:-}" in
+  env|help)
+    exec "$GO_BINARY" "$@"
+    ;;
+esac
 
 # --- Detect container runtime ---
 RUNTIME="${CONTAINER_RUNTIME:-}"
@@ -51,6 +52,19 @@ CACHE_VOLUME="${GODEV_CACHE_VOLUME:-godev-modcache}"
 TTY_FLAG=""
 [ -t 0 ] && TTY_FLAG="--tty"
 
+# GOOS/GOARCH are only meaningful for cross-compilation (go build).
+# For go run the binary executes inside the Linux container, so the host
+# values would produce the wrong target and are intentionally omitted.
+_CROSS_ENV_FLAGS=()
+case "${1:-}" in
+  build)
+    _CROSS_ENV_FLAGS+=(
+      --env GOOS="$("$GO_BINARY" env GOOS)"
+      --env GOARCH="$("$GO_BINARY" env GOARCH)"
+    )
+    ;;
+esac
+
 # Build extra volume flags from GODEV_EXTRA_VOLUMES (colon-separated host paths,
 # each mounted at the same absolute path inside the container — needed for replace directives)
 EXTRA_VOL_FLAGS=()
@@ -71,8 +85,7 @@ exec "$RUNTIME" run --rm \
   --env GOPATH=/root/go \
   --env GOFLAGS="$("$GO_BINARY" env GOFLAGS)" \
   --env CGO_ENABLED="$("$GO_BINARY" env CGO_ENABLED)" \
-  --env GOOS="$("$GO_BINARY" env GOOS)" \
-  --env GOARCH="$("$GO_BINARY" env GOARCH)" \
+  ${_CROSS_ENV_FLAGS[@]+"${_CROSS_ENV_FLAGS[@]}"} \
   --env GONOSUMCHECK="$("$GO_BINARY" env GONOSUMCHECK)" \
   --env GONOSUMDB="$("$GO_BINARY" env GONOSUMDB)" \
   --env GOPRIVATE="$("$GO_BINARY" env GOPRIVATE)" \
