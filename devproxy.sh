@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-INSTALL_URL="${REPO_BASE_URL:-https://raw.githubusercontent.com/OWNER/REPO/main}/install.sh"
+INSTALL_URL="${REPO_BASE_URL:-https://raw.githubusercontent.com/TykTechnologies/devproxy/refs/heads/main}/install.sh"
 INSTALL_DIR="$HOME/.local/bin/devproxy"
 MARKER_START="# >>> devproxy >>>"
 MARKER_END="# <<< devproxy <<<"

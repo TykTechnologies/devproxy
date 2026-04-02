@@ -6,7 +6,7 @@
 set -euo pipefail
 
 # --- Configuration ---
-REPO_BASE_URL="${REPO_BASE_URL:-https://raw.githubusercontent.com/OWNER/REPO/main}"
+REPO_BASE_URL="${REPO_BASE_URL:-https://raw.githubusercontent.com/TykTechnologies/devproxy/refs/heads/main}"
 INSTALL_DIR="$HOME/.local/bin/devproxy"
 
 # --- Detect shell profile ---
