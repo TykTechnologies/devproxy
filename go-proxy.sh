@@ -54,8 +54,8 @@ TTY_FLAG=""
 exec "$RUNTIME" run --rm \
   --interactive \
   ${TTY_FLAG} \
-  --workdir /workspace \
-  --volume "$(pwd):/workspace${RUNTIME_VOLOPT}" \
+  --workdir "$(pwd)" \
+  --volume "$(pwd):$(pwd)${RUNTIME_VOLOPT}" \
   --volume "${CACHE_VOLUME}:/root/go/pkg/mod${RUNTIME_VOLOPT}" \
   --env GOPATH=/root/go \
   --env GOFLAGS="$("$GO_BINARY" env GOFLAGS)" \
