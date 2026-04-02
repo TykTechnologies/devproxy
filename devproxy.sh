@@ -39,6 +39,7 @@ cmd_list() {
   echo "  GO_BINARY=${GO_BINARY:-  (not set)}"
   echo "  NPM_BINARY=${NPM_BINARY:- (not set)}"
   echo "  CONTAINER_RUNTIME=${CONTAINER_RUNTIME:- (auto-detect)}"
+  echo "  GODEV_SYNTHETIC_GOROOT=${GODEV_SYNTHETIC_GOROOT:- (not set)}"
 }
 
 cmd_update() {
@@ -50,6 +51,12 @@ cmd_uninstall() {
   echo "Removing proxy scripts..."
   rm -f "$INSTALL_DIR/go" "$INSTALL_DIR/npm" "$INSTALL_DIR/npx" "$INSTALL_DIR/devproxy"
   rmdir "$INSTALL_DIR" 2>/dev/null && echo "Removed $INSTALL_DIR" || true
+
+  SYNTHETIC_GOROOT="${GODEV_SYNTHETIC_GOROOT:-$HOME/.local/share/devproxy/goroot}"
+  if [ -d "$SYNTHETIC_GOROOT" ]; then
+    rm -rf "$SYNTHETIC_GOROOT"
+    echo "Removed synthetic GOROOT at $SYNTHETIC_GOROOT"
+  fi
 
   PROFILE="$(detect_profile)"
   if grep -qF "$MARKER_START" "$PROFILE" 2>/dev/null; then

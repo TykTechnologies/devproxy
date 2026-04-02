@@ -41,6 +41,16 @@ fi
 echo "Using go binary:  $GO_BINARY"
 echo "Using npm binary: $NPM_BINARY"
 
+# --- Create synthetic GOROOT for IDE integration (e.g. GoLand) ---
+REAL_GOROOT="$("$GO_BINARY" env GOROOT)"
+SYNTHETIC_GOROOT="$HOME/.local/share/devproxy/goroot"
+mkdir -p "$SYNTHETIC_GOROOT/bin"
+ln -sf "$INSTALL_DIR/go" "$SYNTHETIC_GOROOT/bin/go"
+for dir in src pkg api; do
+  [ -d "$REAL_GOROOT/$dir" ] && ln -sfn "$REAL_GOROOT/$dir" "$SYNTHETIC_GOROOT/$dir"
+done
+echo "Created synthetic GOROOT at $SYNTHETIC_GOROOT"
+
 # --- Write ~/.devproxy config file (only on first install) ---
 DEVPROXY_CONFIG="$HOME/.devproxy"
 if [ -f "$DEVPROXY_CONFIG" ]; then
@@ -57,6 +67,7 @@ NPM_BINARY="${NPM_BINARY}"
 
 GODEV_IMAGE=golang:1.25-alpine
 GODEV_CACHE_VOLUME=godev-modcache
+GODEV_SYNTHETIC_GOROOT="${SYNTHETIC_GOROOT}"
 
 NODEDEV_IMAGE=node:24-alpine
 NODEDEV_CACHE_VOLUME=nodedev-npmcache
@@ -113,3 +124,6 @@ echo ""
 echo "Then verify:"
 echo "  go version"
 echo "  npm --version"
+echo ""
+echo "GoLand integration:"
+echo "  Settings → Go → GOROOT → Add local → $SYNTHETIC_GOROOT"
