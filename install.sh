@@ -68,6 +68,8 @@ NPM_BINARY="${NPM_BINARY}"
 GODEV_IMAGE=golang:1.25
 GODEV_CACHE_VOLUME=godev-modcache
 GODEV_SYNTHETIC_GOROOT="${SYNTHETIC_GOROOT}"
+# GODEV_EXTRA_VOLUMES= # uncomment to provide a list of directories to be mounted (colon-separated)
+# GODEV_NETRC=1  # uncomment to mount ~/.netrc into the container (private modules)
 
 NODEDEV_IMAGE=node:24
 NODEDEV_CACHE_VOLUME=nodedev-npmcache

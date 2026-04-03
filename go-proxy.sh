@@ -4,8 +4,14 @@
 
 set -euo pipefail
 
+# Capture env overrides before sourcing config so they take precedence
+_GODEV_NETRC_ENV="${GODEV_NETRC:-}"
+
 # Load central config (covers non-login shells: GoLand, CI, env -i contexts)
 [ -f "$HOME/.devproxy" ] && source "$HOME/.devproxy"
+
+# Env overrides config file
+[ -n "$_GODEV_NETRC_ENV" ] && GODEV_NETRC="$_GODEV_NETRC_ENV"
 
 # --- Validate required config ---
 if [ -z "${GO_BINARY:-}" ]; then
@@ -14,7 +20,7 @@ if [ -z "${GO_BINARY:-}" ]; then
 fi
 
 # --- Unsecure mode: bypass the container entirely ---
-if [ -n "${UNSECURE:-}" ]; then
+if [ -n "${DEVPROXY_UNSECURE:-}" ]; then
   exec "$GO_BINARY" "$@"
 fi
 
@@ -65,6 +71,14 @@ case "${1:-}" in
     ;;
 esac
 
+# Mount ~/.netrc read-only when GODEV_NETRC is set (enables private module access)
+NETRC_FLAG=()
+if [ -n "${GODEV_NETRC:-}" ]; then
+  _netrc_opts="ro"
+  [ "$RUNTIME" = "podman" ] && _netrc_opts="ro,z"
+  NETRC_FLAG=(--volume "$HOME/.netrc:/root/.netrc:${_netrc_opts}")
+fi
+
 # Build extra volume flags from GODEV_EXTRA_VOLUMES (colon-separated host paths,
 # each mounted at the same absolute path inside the container — needed for replace directives)
 EXTRA_VOL_FLAGS=()
@@ -81,6 +95,7 @@ exec "$RUNTIME" run --rm \
   --workdir "$(pwd)" \
   --volume "$(pwd):$(pwd)${RUNTIME_VOLOPT}" \
   --volume "${CACHE_VOLUME}:/root/go/pkg/mod${RUNTIME_VOLOPT}" \
+  "${NETRC_FLAG[@]+"${NETRC_FLAG[@]}"}" \
   "${EXTRA_VOL_FLAGS[@]+"${EXTRA_VOL_FLAGS[@]}"}" \
   --env GOPATH=/root/go \
   --env GOFLAGS="$("$GO_BINARY" env GOFLAGS)" \
