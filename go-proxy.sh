@@ -98,7 +98,7 @@ exec "$RUNTIME" run --rm \
   "${NETRC_FLAG[@]+"${NETRC_FLAG[@]}"}" \
   "${EXTRA_VOL_FLAGS[@]+"${EXTRA_VOL_FLAGS[@]}"}" \
   --env GOPATH=/root/go \
-  --env GOFLAGS="$("$GO_BINARY" env GOFLAGS)" \
+  --env GOFLAGS="$("$GO_BINARY" env GOFLAGS) -buildvcs=false" \
   --env CGO_ENABLED="$("$GO_BINARY" env CGO_ENABLED)" \
   ${_CROSS_ENV_FLAGS[@]+"${_CROSS_ENV_FLAGS[@]}"} \
   --env GONOSUMCHECK="$("$GO_BINARY" env GONOSUMCHECK)" \
