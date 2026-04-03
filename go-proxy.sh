@@ -58,28 +58,39 @@ CACHE_VOLUME="${GODEV_CACHE_VOLUME:-godev-modcache}"
 TTY_FLAG=""
 [ -t 0 ] && TTY_FLAG="--tty"
 
-# GOOS/GOARCH are only meaningful for cross-compilation (go build).
-# For go run the binary executes inside the Linux container, so the host
-# values would produce the wrong target and are intentionally omitted.
+# GOOS/GOARCH are forwarded for go build only, and only when CGO is disabled.
+# With CGO enabled the binary is OS-specific and must be compiled natively —
+# cross-compiling with CGO from a Linux container to darwin is not supported
+# (clang would receive macOS-only flags like -arch and fail). Use DEVPROXY_UNSECURE=1
+# to build CGO binaries for the host platform via the real toolchain.
 _CROSS_ENV_FLAGS=()
 case "${1:-}" in
   build)
-    _CROSS_ENV_FLAGS+=(
-      --env GOOS="$("$GO_BINARY" env GOOS)"
-      --env GOARCH="$("$GO_BINARY" env GOARCH)"
-    )
+    if [ "$("$GO_BINARY" env CGO_ENABLED)" = "0" ]; then
+      _CROSS_ENV_FLAGS+=(
+        --env GOOS="$("$GO_BINARY" env GOOS)"
+        --env GOARCH="$("$GO_BINARY" env GOARCH)"
+      )
+    fi
     ;;
 esac
 
-# Mount ~/.netrc and ~/.gitconfig read-only when GODEV_NETRC is set.
-# Both are needed for private module access: .netrc provides HTTPS credentials,
-# .gitconfig carries URL rewrites (e.g. HTTPS→SSH) and credential helper config.
+# Mount credentials and forward the SSH agent when GODEV_NETRC is set.
+# .netrc  — HTTPS credentials
+# .gitconfig — URL rewrites (e.g. HTTPS→SSH) and credential helper config
+# SSH agent — handles SSH-based auth without exposing key files to the container
 NETRC_FLAG=()
 if [ -n "${GODEV_NETRC:-}" ]; then
   _cred_opts="ro"
   [ "$RUNTIME" = "podman" ] && _cred_opts="ro,z"
-  [ -f "$HOME/.netrc" ]    && NETRC_FLAG+=(--volume "$HOME/.netrc:/root/.netrc:${_cred_opts}")
+  [ -f "$HOME/.netrc" ]     && NETRC_FLAG+=(--volume "$HOME/.netrc:/root/.netrc:${_cred_opts}")
   [ -f "$HOME/.gitconfig" ] && NETRC_FLAG+=(--volume "$HOME/.gitconfig:/root/.gitconfig:${_cred_opts}")
+  if [ -n "${SSH_AUTH_SOCK:-}" ]; then
+    NETRC_FLAG+=(
+      --volume "${SSH_AUTH_SOCK}:/tmp/ssh_auth.sock"
+      --env SSH_AUTH_SOCK=/tmp/ssh_auth.sock
+    )
+  fi
 fi
 
 # Build extra volume flags from GODEV_EXTRA_VOLUMES (colon-separated host paths,
