@@ -71,12 +71,15 @@ case "${1:-}" in
     ;;
 esac
 
-# Mount ~/.netrc read-only when GODEV_NETRC is set (enables private module access)
+# Mount ~/.netrc and ~/.gitconfig read-only when GODEV_NETRC is set.
+# Both are needed for private module access: .netrc provides HTTPS credentials,
+# .gitconfig carries URL rewrites (e.g. HTTPS→SSH) and credential helper config.
 NETRC_FLAG=()
 if [ -n "${GODEV_NETRC:-}" ]; then
-  _netrc_opts="ro"
-  [ "$RUNTIME" = "podman" ] && _netrc_opts="ro,z"
-  NETRC_FLAG=(--volume "$HOME/.netrc:/root/.netrc:${_netrc_opts}")
+  _cred_opts="ro"
+  [ "$RUNTIME" = "podman" ] && _cred_opts="ro,z"
+  [ -f "$HOME/.netrc" ]    && NETRC_FLAG+=(--volume "$HOME/.netrc:/root/.netrc:${_cred_opts}")
+  [ -f "$HOME/.gitconfig" ] && NETRC_FLAG+=(--volume "$HOME/.gitconfig:/root/.gitconfig:${_cred_opts}")
 fi
 
 # Build extra volume flags from GODEV_EXTRA_VOLUMES (colon-separated host paths,
