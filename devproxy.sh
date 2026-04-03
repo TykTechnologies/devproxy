@@ -4,6 +4,7 @@
 #   list       Show installed proxies and their status
 #   update     Re-download and reinstall all proxy scripts
 #   uninstall  Remove all proxies and clean up the shell profile
+#   nuke       uninstall + delete ~/.devproxy (prompts for confirmation)
 
 set -euo pipefail
 
@@ -73,10 +74,28 @@ cmd_uninstall() {
   echo "Done. Run: source $PROFILE"
 }
 
+cmd_nuke() {
+  echo "This will uninstall devproxy AND permanently delete $HOME/.devproxy."
+  printf "Type 'yes' to confirm: "
+  read -r _answer
+  if [ "$_answer" != "yes" ]; then
+    echo "Aborted."
+    exit 1
+  fi
+
+  cmd_uninstall
+
+  if [ -f "$HOME/.devproxy" ]; then
+    rm -f "$HOME/.devproxy"
+    echo "Removed $HOME/.devproxy"
+  fi
+}
+
 case "${1:-}" in
   list)      cmd_list ;;
   update)    cmd_update ;;
   uninstall) cmd_uninstall ;;
+  nuke)      cmd_nuke ;;
   *)
     echo "Usage: devproxy <command>"
     echo ""
@@ -84,6 +103,7 @@ case "${1:-}" in
     echo "  list       Show installed proxies and their status"
     echo "  update     Re-download and reinstall all proxy scripts"
     echo "  uninstall  Remove all proxies and clean up the shell profile"
+    echo "  nuke       uninstall + delete ~/.devproxy (prompts for confirmation)"
     exit 1
     ;;
 esac
