@@ -139,6 +139,67 @@ cmd_build() {
     "$HOME/.local/share/devproxy/Dockerfiles"
 }
 
+cmd_go_exec() {
+  # Collect -e KEY=VALUE flags before the binary argument
+  local env_flags=()
+  while [ "${1:-}" = "-e" ]; do
+    shift
+    env_flags+=(--env "${1}")
+    shift
+  done
+
+  local binary="${1:-}"
+  if [ -z "$binary" ]; then
+    echo "Usage: devproxy go exec [-e KEY=VALUE]... <binary> [args...]" >&2
+    echo "  e.g. devproxy go exec -e DB_HOST=host.docker.internal ./my_binary" >&2
+    exit 1
+  fi
+
+  # Resolve to absolute path so the container mount and invocation path match
+  local abs_binary
+  abs_binary="$(cd "$(dirname "$binary")" && pwd)/$(basename "$binary")"
+
+  if [ ! -f "$abs_binary" ]; then
+    echo "devproxy: binary not found: $abs_binary" >&2
+    exit 1
+  fi
+
+  local image="${GODEV_IMAGE:-}"
+  if [ -z "$image" ]; then
+    echo "devproxy: GODEV_IMAGE is not set - run the install script or set it in ~/.devproxy" >&2
+    exit 1
+  fi
+
+  local runtime="${CONTAINER_RUNTIME:-}"
+  if [ -z "$runtime" ]; then
+    if command -v podman &>/dev/null; then
+      runtime=podman
+    elif command -v docker &>/dev/null; then
+      runtime=docker
+    else
+      echo "devproxy: neither podman nor docker found" >&2
+      exit 1
+    fi
+  fi
+
+  local volopt=""
+  [ "$runtime" = "podman" ] && volopt=":z"
+
+  local tty_flag=""
+  [ -t 0 ] && tty_flag="--tty"
+
+  exec "$runtime" run --rm \
+    --interactive \
+    ${tty_flag} \
+    --network host \
+    --workdir "$(pwd)" \
+    --volume "$(pwd):$(pwd)${volopt}" \
+    --volume "${abs_binary}:${abs_binary}${volopt}" \
+    "${env_flags[@]+"${env_flags[@]}"}" \
+    "$image" \
+    "$abs_binary" "${@:2}"
+}
+
 cmd_go_use() {
   local image="${1:-}"
   if [ -z "$image" ]; then
@@ -192,10 +253,12 @@ case "${1:-}" in
   build)     cmd_build "${@:2}" ;;
   go)
     case "${2:-}" in
-      use) cmd_go_use "${3:-}" ;;
+      use)  cmd_go_use "${3:-}" ;;
+      exec) cmd_go_exec "${@:3}" ;;
       *)
         echo "Usage: devproxy go <command>" >&2
-        echo "  use <image>   Set GODEV_IMAGE in ~/.devproxy" >&2
+        echo "  use <image>          Set GODEV_IMAGE in ~/.devproxy" >&2
+        echo "  exec <binary> [args] Run a Linux binary inside the container" >&2
         exit 1
         ;;
     esac
@@ -212,6 +275,7 @@ case "${1:-}" in
     echo "  disable            Uncomment DEVPROXY_UNSECURE (bypass proxy)"
     echo "  build <name> <ver> Build a devproxy image (e.g. build golang 1.25)"
     echo "  go use <image>     Set GODEV_IMAGE in ~/.devproxy (e.g. go use devproxy-golang:1.25)"
+    echo "  go exec <binary>   Run a Linux binary inside the GODEV_IMAGE container"
     exit 1
     ;;
 esac
