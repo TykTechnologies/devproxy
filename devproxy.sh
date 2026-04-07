@@ -99,6 +99,63 @@ cmd_nuke() {
   fi
 }
 
+cmd_build() {
+  local name="${1:-}"
+  local version="${2:-}"
+
+  if [ -z "$name" ] || [ -z "$version" ]; then
+    echo "Usage: devproxy build <name> <version>" >&2
+    echo "  e.g. devproxy build golang 1.25" >&2
+    exit 1
+  fi
+
+  local dockerfile="$HOME/.local/share/devproxy/Dockerfiles/devproxy-${name}.Dockerfile"
+  if [ ! -f "$dockerfile" ]; then
+    echo "devproxy: Dockerfile not found: $dockerfile" >&2
+    exit 1
+  fi
+
+  local arg_name
+  arg_name="$(echo "$name" | tr '[:lower:]' '[:upper:]')_VERSION"
+  local tag="devproxy-${name}:${version}"
+
+  local runtime="${CONTAINER_RUNTIME:-}"
+  if [ -z "$runtime" ]; then
+    if command -v podman &>/dev/null; then
+      runtime=podman
+    elif command -v docker &>/dev/null; then
+      runtime=docker
+    else
+      echo "devproxy: neither podman nor docker found" >&2
+      exit 1
+    fi
+  fi
+
+  echo "Building $tag using $runtime..."
+  "$runtime" build \
+    --build-arg "${arg_name}=${version}" \
+    --tag "$tag" \
+    --file "$dockerfile" \
+    "$HOME/.local/share/devproxy/Dockerfiles"
+}
+
+cmd_go_use() {
+  local image="${1:-}"
+  if [ -z "$image" ]; then
+    echo "Usage: devproxy go use <image>" >&2
+    echo "  e.g. devproxy go use devproxy-golang:1.25" >&2
+    exit 1
+  fi
+
+  local cfg="$HOME/.devproxy"
+  if [ ! -f "$cfg" ]; then
+    echo "devproxy: $cfg not found" >&2; exit 1
+  fi
+
+  sed -i.bak "s|^GODEV_IMAGE=.*|GODEV_IMAGE=${image}|" "$cfg" && rm -f "$cfg.bak"
+  echo "GODEV_IMAGE set to ${image} in $cfg"
+}
+
 cmd_enable() {
   local cfg="$HOME/.devproxy"
   if [ ! -f "$cfg" ]; then
@@ -132,16 +189,29 @@ case "${1:-}" in
   nuke)      cmd_nuke ;;
   enable)    cmd_enable ;;
   disable)   cmd_disable ;;
+  build)     cmd_build "${@:2}" ;;
+  go)
+    case "${2:-}" in
+      use) cmd_go_use "${3:-}" ;;
+      *)
+        echo "Usage: devproxy go <command>" >&2
+        echo "  use <image>   Set GODEV_IMAGE in ~/.devproxy" >&2
+        exit 1
+        ;;
+    esac
+    ;;
   *)
     echo "Usage: devproxy <command>"
     echo ""
     echo "Commands:"
-    echo "  list       Show installed proxies and their status"
-    echo "  update     Re-download and reinstall all proxy scripts"
-    echo "  uninstall  Remove all proxies and clean up the shell profile"
-    echo "  nuke       uninstall + delete ~/.devproxy (prompts for confirmation)"
-    echo "  enable     Comment out DEVPROXY_UNSECURE (proxy active)"
-    echo "  disable    Uncomment DEVPROXY_UNSECURE (bypass proxy)"
+    echo "  list               Show installed proxies and their status"
+    echo "  update             Re-download and reinstall all proxy scripts"
+    echo "  uninstall          Remove all proxies and clean up the shell profile"
+    echo "  nuke               uninstall + delete ~/.devproxy (prompts for confirmation)"
+    echo "  enable             Comment out DEVPROXY_UNSECURE (proxy active)"
+    echo "  disable            Uncomment DEVPROXY_UNSECURE (bypass proxy)"
+    echo "  build <name> <ver> Build a devproxy image (e.g. build golang 1.25)"
+    echo "  go use <image>     Set GODEV_IMAGE in ~/.devproxy (e.g. go use devproxy-golang:1.25)"
     exit 1
     ;;
 esac
