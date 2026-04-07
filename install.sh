@@ -73,7 +73,7 @@ GODEV_SYNTHETIC_GOROOT="${SYNTHETIC_GOROOT}"
 # GODEV_NETRC=1  # uncomment to mount ~/.netrc into the container (private modules)
 
 NODEDEV_IMAGE=node:24
-NODEDEV_CACHE_VOLUME=nodedev-npmcache
+# NODEDEV_NPMRC=1  # uncomment to mount ~/.npmrc into the container (private registries)
 EOF
   echo "Wrote config to $DEVPROXY_CONFIG"
 fi
@@ -85,13 +85,10 @@ echo "Downloading go proxy..."
 curl -fsSL "$REPO_BASE_URL/go-proxy.sh" -o "$INSTALL_DIR/go"
 chmod +x "$INSTALL_DIR/go"
 
-echo "Downloading npm proxy..."
-curl -fsSL "$REPO_BASE_URL/npm-proxy.sh" -o "$INSTALL_DIR/npm"
+echo "Downloading npm/npx proxy..."
+curl -fsSL "$REPO_BASE_URL/npm-npx-proxy.sh" -o "$INSTALL_DIR/npm"
 chmod +x "$INSTALL_DIR/npm"
-
-echo "Downloading npx proxy..."
-curl -fsSL "$REPO_BASE_URL/npx-proxy.sh" -o "$INSTALL_DIR/npx"
-chmod +x "$INSTALL_DIR/npx"
+cp "$INSTALL_DIR/npm" "$INSTALL_DIR/npx"
 
 echo "Downloading devproxy manager..."
 curl -fsSL "$REPO_BASE_URL/devproxy.sh" -o "$INSTALL_DIR/devproxy"
