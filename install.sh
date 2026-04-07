@@ -28,13 +28,13 @@ rm -f "$INSTALL_DIR/go" "$INSTALL_DIR/npm" "$INSTALL_DIR/npx" "$INSTALL_DIR/devp
 # --- Find the real binaries ---
 GO_BINARY="$(command -v go 2>/dev/null || true)"
 if [ -z "$GO_BINARY" ]; then
-  echo "install: 'go' not found on PATH — install Go first" >&2
+  echo "install: 'go' not found on PATH - install Go first" >&2
   exit 1
 fi
 
 NPM_BINARY="$(command -v npm 2>/dev/null || true)"
 if [ -z "$NPM_BINARY" ]; then
-  echo "install: 'npm' not found on PATH — install Node.js first" >&2
+  echo "install: 'npm' not found on PATH - install Node.js first" >&2
   exit 1
 fi
 
@@ -54,10 +54,10 @@ echo "Created synthetic GOROOT at $SYNTHETIC_GOROOT"
 # --- Write ~/.devproxy config file (only on first install) ---
 DEVPROXY_CONFIG="$HOME/.devproxy"
 if [ -f "$DEVPROXY_CONFIG" ]; then
-  echo "Config already exists at $DEVPROXY_CONFIG — leaving it unchanged"
+  echo "Config already exists at $DEVPROXY_CONFIG - leaving it unchanged"
 else
   cat > "$DEVPROXY_CONFIG" <<EOF
-# devproxy configuration — managed by install.sh
+# devproxy configuration - managed by install.sh
 # Edit this file to change tool versions or override runtime settings.
 
 # DEVPROXY_UNSECURE=1 # uncomment to always use the native tool binaries
@@ -68,7 +68,6 @@ GO_BINARY="${GO_BINARY}"
 NPM_BINARY="${NPM_BINARY}"
 
 GODEV_IMAGE=golang:1.25
-GODEV_CACHE_VOLUME=godev-modcache
 GODEV_SYNTHETIC_GOROOT="${SYNTHETIC_GOROOT}"
 # GODEV_EXTRA_VOLUMES= # uncomment to provide a list of directories to be mounted (colon-separated)
 # GODEV_NETRC=1  # uncomment to mount ~/.netrc into the container (private modules)

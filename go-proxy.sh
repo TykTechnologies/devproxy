@@ -48,12 +48,8 @@ fi
 RUNTIME_VOLOPT=""
 [ "$RUNTIME" = "podman" ] && RUNTIME_VOLOPT=":z"
 
-GO_IMAGE="${GODEV_IMAGE:-golang:1.24-alpine}"
-CACHE_VOLUME="${GODEV_CACHE_VOLUME:-godev-modcache}"
-
-# Ensure the cache volume exists (idempotent)
-"$RUNTIME" volume inspect "$CACHE_VOLUME" &>/dev/null \
-  || "$RUNTIME" volume create "$CACHE_VOLUME" &>/dev/null
+GO_IMAGE="${GODEV_IMAGE:-golang:1.25}"
+HOST_GOPATH="$("$GO_BINARY" env GOPATH)"
 
 TTY_FLAG=""
 [ -t 0 ] && TTY_FLAG="--tty"
@@ -103,15 +99,26 @@ if [ -n "${GODEV_EXTRA_VOLUMES:-}" ]; then
   done
 fi
 
+# Auto-mount directories referenced by -modfile so IDEs (e.g. GoLand) that pass
+# an absolute project path without running from the project directory still work.
+for _arg in "$@"; do
+  case "$_arg" in
+    -modfile=*)
+      _moddir="$(dirname "${_arg#-modfile=}")"
+      EXTRA_VOL_FLAGS+=(--volume "${_moddir}:${_moddir}${RUNTIME_VOLOPT}")
+      ;;
+  esac
+done
+
 exec "$RUNTIME" run --rm \
   --interactive \
   ${TTY_FLAG} \
   --workdir "$(pwd)" \
   --volume "$(pwd):$(pwd)${RUNTIME_VOLOPT}" \
-  --volume "${CACHE_VOLUME}:/root/go/pkg/mod${RUNTIME_VOLOPT}" \
+  --volume "${HOST_GOPATH}:${HOST_GOPATH}${RUNTIME_VOLOPT}" \
   "${NETRC_FLAG[@]+"${NETRC_FLAG[@]}"}" \
   "${EXTRA_VOL_FLAGS[@]+"${EXTRA_VOL_FLAGS[@]}"}" \
-  --env GOPATH=/root/go \
+  --env GOPATH="${HOST_GOPATH}" \
   --env GOFLAGS="$("$GO_BINARY" env GOFLAGS) -buildvcs=false" \
   --env CGO_ENABLED="$("$GO_BINARY" env CGO_ENABLED)" \
   ${_CROSS_ENV_FLAGS[@]+"${_CROSS_ENV_FLAGS[@]}"} \
