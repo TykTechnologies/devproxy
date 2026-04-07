@@ -61,6 +61,12 @@ cmd_uninstall() {
     echo "Removed synthetic GOROOT at $SYNTHETIC_GOROOT"
   fi
 
+  DOCKERFILES_DIR="$HOME/.local/share/devproxy/Dockerfiles"
+  if [ -d "$DOCKERFILES_DIR" ]; then
+    rm -rf "$DOCKERFILES_DIR"
+    echo "Removed Dockerfiles at $DOCKERFILES_DIR"
+  fi
+
   PROFILE="$(detect_profile)"
   if grep -qF "$MARKER_START" "$PROFILE" 2>/dev/null; then
     echo "Cleaning up $PROFILE..."

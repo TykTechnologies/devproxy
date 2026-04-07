@@ -98,6 +98,16 @@ echo "Downloading devproxy manager..."
 curl -fsSL "$REPO_BASE_URL/devproxy.sh" -o "$INSTALL_DIR/devproxy"
 chmod +x "$INSTALL_DIR/devproxy"
 
+# --- Download Dockerfiles ---
+DOCKERFILES_DIR="$HOME/.local/share/devproxy/Dockerfiles"
+mkdir -p "$DOCKERFILES_DIR"
+
+echo "Downloading Dockerfiles..."
+for dockerfile in devproxy-golang.Dockerfile; do
+  curl -fsSL "$REPO_BASE_URL/Dockerfiles/$dockerfile" -o "$DOCKERFILES_DIR/$dockerfile"
+  echo "  → $DOCKERFILES_DIR/$dockerfile"
+done
+
 # --- Write shell profile block (idempotent via markers) ---
 BLOCK="${MARKER_START}
 export PATH=\"${INSTALL_DIR}:\$PATH\"
