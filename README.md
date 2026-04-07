@@ -1,7 +1,189 @@
 # devproxy
 
+Devproxy intercepts `go` (and `npm`/`npx`) invocations and transparently runs them inside
+ephemeral containers. Package installation code never executes on the host, isolating it from
+supply-chain attacks such as malicious install scripts or post-install hooks.
+
 ## Install
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/TykTechnologies/devproxy/refs/heads/main/install.sh | bash
+```
+
+Then activate in the current shell:
+
+```sh
+source ~/.zshrc   # or ~/.bashrc
+```
+
+---
+
+## Go proxy
+
+### How it works
+
+The install script places a proxy script at `~/.local/bin/devproxy/go` and prepends that
+directory to `PATH`. Every `go` command is intercepted by the proxy, which:
+
+1. Sources `~/.devproxy` for configuration.
+2. Runs the command inside an ephemeral container using the image defined by `GODEV_IMAGE`.
+3. Mounts the working directory and the host GOPATH at the same absolute paths so all module
+   cache, replace directives, and IDE-generated absolute paths resolve identically inside and
+   outside the container.
+4. Forwards the relevant Go environment variables (`GOPROXY`, `GOPRIVATE`, `GONOSUMDB`, etc.)
+   from the host's real Go installation.
+
+`go env` and `go help` are always passed through to the real binary without starting a
+container.
+
+---
+
+### Configuration (`~/.devproxy`)
+
+| Variable | Default | Description |
+|---|---|---|
+| `GO_BINARY` | *(set by installer)* | Path to the real `go` binary on the host |
+| `CONTAINER_RUNTIME` | auto-detect | `podman` or `docker` |
+| `GODEV_IMAGE` | `golang:1.25` | Container image used for all go commands |
+| `GODEV_EXTRA_VOLUMES` | *(unset)* | Colon-separated list of extra host paths to mount |
+| `GODEV_NETRC` | *(unset)* | Set to `1` to enable private module credentials |
+| `DEVPROXY_UNSECURE` | *(unset)* | Set to `1` to bypass the container entirely |
+
+---
+
+### Bypassing the container
+
+To run a single command on the host without a container:
+
+```sh
+DEVPROXY_UNSECURE=1 go mod tidy
+```
+
+To disable the proxy globally until re-enabled:
+
+```sh
+devproxy disable   # uncomments DEVPROXY_UNSECURE in ~/.devproxy
+devproxy enable    # comments it back out
+```
+
+---
+
+### Private modules
+
+Set `GODEV_NETRC=1` in `~/.devproxy` (or per-command) to mount credentials into the
+container. The proxy mounts the following files read-only when the variable is set:
+
+| File | Container path | Purpose |
+|---|---|---|
+| `~/.netrc` | `/root/.netrc` | HTTPS credentials (username / PAT) |
+| `~/.gitconfig` | `/root/.gitconfig` | URL rewrites, credential helper config |
+| `$SSH_AUTH_SOCK` | `/tmp/ssh_auth.sock` | SSH agent socket for key-based auth |
+
+The SSH agent socket is forwarded automatically if `SSH_AUTH_SOCK` is set in the environment,
+so no private key files are ever copied into the container.
+
+**Example `~/.netrc` entry:**
+
+```
+machine github.com
+login your-github-username
+password ghp_yourPersonalAccessToken
+```
+
+**Per-command override:**
+
+```sh
+GODEV_NETRC=1 go get github.com/YourOrg/private-module
+```
+
+---
+
+### Module replace directives
+
+If your `go.mod` uses a `replace` directive pointing to a local path, that path must also be
+visible inside the container. Add it to `GODEV_EXTRA_VOLUMES` in `~/.devproxy`:
+
+```sh
+GODEV_EXTRA_VOLUMES=/Users/you/Dev/Go/mylib:/Users/you/Dev/Go/another
+```
+
+Each path is mounted at the same absolute path in the container, so replace directives require
+no changes.
+
+---
+
+### CGO and cross-compilation
+
+| Scenario | Behaviour |
+|---|---|
+| `go build` with CGO disabled | `GOOS`/`GOARCH` forwarded — cross-compiles for the host OS |
+| `go build` with CGO enabled | `GOOS`/`GOARCH` **not** forwarded — produces a Linux binary |
+| `go run` | Always builds and runs inside the Linux container |
+
+Cross-compiling a CGO binary from a Linux container to macOS is not supported (the macOS SDK
+is not available in the container). To build a CGO binary for the host platform, use the
+real toolchain:
+
+```sh
+DEVPROXY_UNSECURE=1 go build ./...
+```
+
+---
+
+### Custom images (with CGO / Clang)
+
+The installer downloads a ready-made Dockerfile that adds Clang and Git to the standard Go
+image. Build and activate it with:
+
+```sh
+devproxy build golang 1.25
+devproxy go use devproxy-golang:1.25
+```
+
+The Dockerfile is installed at `~/.local/share/devproxy/Dockerfiles/devproxy-golang.Dockerfile`.
+
+---
+
+### Running Linux binaries on macOS
+
+A binary compiled inside the container is a Linux ELF binary and cannot run natively on macOS.
+Use `devproxy go exec` to run it inside the same container environment:
+
+```sh
+go build -o ./myapp .
+devproxy go exec ./myapp --flag value
+```
+
+Pass environment variables with `-e`:
+
+```sh
+devproxy go exec -e DB_HOST=host.docker.internal -e PORT=8080 ./myapp
+```
+
+The container uses `--network host` so `localhost` resolves to the host network (note: on
+macOS with Docker Desktop or Podman, use `host.docker.internal` / `host.containers.internal`
+instead, as the container runs inside a Linux VM).
+
+---
+
+### GoLand integration
+
+Set the GOROOT in GoLand to the synthetic GOROOT created by the installer:
+
+```
+Settings → Go → GOROOT → Add local → ~/.local/share/devproxy/goroot
+```
+
+The synthetic GOROOT symlinks the real Go standard library but replaces the `go` binary with
+the proxy, so all GoLand-triggered `go list`, `go mod`, and module resolution calls run inside
+the container automatically. Absolute paths passed by GoLand via `-modfile` are detected and
+mounted automatically.
+
+---
+
+### Uninstall
+
+```sh
+devproxy uninstall   # removes proxies and shell profile block, keeps ~/.devproxy
+devproxy nuke        # same as above, also deletes ~/.devproxy (prompts for confirmation)
 ```
