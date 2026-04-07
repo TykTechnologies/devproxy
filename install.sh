@@ -60,6 +60,8 @@ else
 # devproxy configuration — managed by install.sh
 # Edit this file to change tool versions or override runtime settings.
 
+# DEVPROXY_UNSECURE=1 # uncomment to always use the native tool binaries
+
 CONTAINER_RUNTIME=
 
 GO_BINARY="${GO_BINARY}"

@@ -5,6 +5,8 @@
 #   update     Re-download and reinstall all proxy scripts
 #   uninstall  Remove all proxies and clean up the shell profile
 #   nuke       uninstall + delete ~/.devproxy (prompts for confirmation)
+#   enable     Comment out DEVPROXY_UNSECURE in ~/.devproxy (proxy active)
+#   disable    Uncomment DEVPROXY_UNSECURE in ~/.devproxy (bypass proxy)
 
 set -euo pipefail
 
@@ -91,11 +93,39 @@ cmd_nuke() {
   fi
 }
 
+cmd_enable() {
+  local cfg="$HOME/.devproxy"
+  if [ ! -f "$cfg" ]; then
+    echo "devproxy: $cfg not found" >&2; exit 1
+  fi
+  if grep -qE '^# DEVPROXY_UNSECURE=' "$cfg"; then
+    echo "Proxy already enabled (DEVPROXY_UNSECURE is commented out)."
+    return
+  fi
+  sed -i.bak 's|^DEVPROXY_UNSECURE=|# DEVPROXY_UNSECURE=|' "$cfg" && rm -f "$cfg.bak"
+  echo "Proxy enabled — DEVPROXY_UNSECURE commented out in $cfg"
+}
+
+cmd_disable() {
+  local cfg="$HOME/.devproxy"
+  if [ ! -f "$cfg" ]; then
+    echo "devproxy: $cfg not found" >&2; exit 1
+  fi
+  if grep -qE '^DEVPROXY_UNSECURE=' "$cfg"; then
+    echo "Proxy already disabled (DEVPROXY_UNSECURE is active)."
+    return
+  fi
+  sed -i.bak 's|^# DEVPROXY_UNSECURE=|DEVPROXY_UNSECURE=|' "$cfg" && rm -f "$cfg.bak"
+  echo "Proxy disabled — DEVPROXY_UNSECURE activated in $cfg"
+}
+
 case "${1:-}" in
   list)      cmd_list ;;
   update)    cmd_update ;;
   uninstall) cmd_uninstall ;;
   nuke)      cmd_nuke ;;
+  enable)    cmd_enable ;;
+  disable)   cmd_disable ;;
   *)
     echo "Usage: devproxy <command>"
     echo ""
@@ -104,6 +134,8 @@ case "${1:-}" in
     echo "  update     Re-download and reinstall all proxy scripts"
     echo "  uninstall  Remove all proxies and clean up the shell profile"
     echo "  nuke       uninstall + delete ~/.devproxy (prompts for confirmation)"
+    echo "  enable     Comment out DEVPROXY_UNSECURE (proxy active)"
+    echo "  disable    Uncomment DEVPROXY_UNSECURE (bypass proxy)"
     exit 1
     ;;
 esac
