@@ -51,23 +51,6 @@ container.
 
 ---
 
-### Bypassing the container
-
-To run a single command on the host without a container:
-
-```sh
-DEVPROXY_UNSECURE=1 go mod tidy
-```
-
-To disable the proxy globally until re-enabled:
-
-```sh
-devproxy disable   # uncomments DEVPROXY_UNSECURE in ~/.devproxy
-devproxy enable    # comments it back out
-```
-
----
-
 ### Private modules
 
 Set `GODEV_NETRC=1` in `~/.devproxy` (or per-command) to mount credentials into the
@@ -178,6 +161,108 @@ The synthetic GOROOT symlinks the real Go standard library but replaces the `go`
 the proxy, so all GoLand-triggered `go list`, `go mod`, and module resolution calls run inside
 the container automatically. Absolute paths passed by GoLand via `-modfile` are detected and
 mounted automatically.
+
+---
+
+## npm / npx proxy
+
+### How it works
+
+The install script places a single proxy script at `~/.local/bin/devproxy/npm` and symlinks
+`~/.local/bin/devproxy/npx` to it. The script detects which tool it was invoked as and routes
+accordingly:
+
+- **npm** — runs the npm command inside an ephemeral `node:24` container. `npm help` and
+  `npm config` are always passed through to the real binary without starting a container.
+- **npx** — always runs inside the container, since its purpose is to download and execute
+  arbitrary packages.
+
+The host npm cache directory (resolved via `npm config get cache`, e.g. `~/.npm`) is mounted
+at the same absolute path inside the container so the cache is shared across runs and persists
+between invocations.
+
+---
+
+### Configuration (`~/.devproxy`)
+
+| Variable | Default | Description |
+|---|---|---|
+| `NPM_BINARY` | *(set by installer)* | Path to the real `npm` binary on the host |
+| `NPX_BINARY` | *(set by installer)* | Path to the real `npx` binary on the host |
+| `CONTAINER_RUNTIME` | auto-detect | `podman` or `docker` |
+| `NODEDEV_IMAGE` | `node:24` | Container image used for all npm/npx commands |
+| `NODEDEV_NPMRC` | *(unset)* | Set to `1` to enable private registry credentials |
+| `DEVPROXY_UNSECURE` | *(unset)* | Set to `1` to bypass the container entirely |
+
+---
+
+### Private packages
+
+Set `NODEDEV_NPMRC=1` in `~/.devproxy` (or per-command) to mount registry credentials into
+the container. The proxy mounts the following files read-only when the variable is set:
+
+| File | Container path | Purpose |
+|---|---|---|
+| `~/.npmrc` | `/root/.npmrc` | Registry auth tokens for private/scoped packages |
+| `~/.gitconfig` | `/root/.gitconfig` | URL rewrites, credential helper config |
+| `$SSH_AUTH_SOCK` | `/tmp/ssh_auth.sock` | SSH agent socket for SSH-based git dependencies |
+
+The SSH agent socket is forwarded automatically if `SSH_AUTH_SOCK` is set in the environment.
+
+**Example `~/.npmrc` entry:**
+
+```
+//registry.npmjs.org/:_authToken=npm_yourAuthToken
+@yourorg:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=ghp_yourPersonalAccessToken
+```
+
+**Per-command override:**
+
+```sh
+NODEDEV_NPMRC=1 npm install
+```
+
+---
+
+## devproxy commands
+
+### Bypassing the container
+
+`DEVPROXY_UNSECURE` is respected by all proxies. To run a single command on the host without
+a container:
+
+```sh
+DEVPROXY_UNSECURE=1 go mod tidy
+DEVPROXY_UNSECURE=1 npm install
+```
+
+To disable the proxy globally until re-enabled:
+
+```sh
+devproxy disable   # uncomments DEVPROXY_UNSECURE in ~/.devproxy
+devproxy enable    # comments it back out
+```
+
+---
+
+### Listing proxies
+
+```sh
+devproxy list
+```
+
+Shows which proxies are installed and the key variables from `~/.devproxy`.
+
+---
+
+### Updating
+
+```sh
+devproxy update
+```
+
+Re-downloads and reinstalls all proxy scripts in-place without touching `~/.devproxy`.
 
 ---
 
