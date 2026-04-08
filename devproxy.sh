@@ -29,7 +29,7 @@ detect_profile() {
 cmd_list() {
   echo "Installed proxies in $INSTALL_DIR:"
   echo ""
-  for name in go npm; do
+  for name in go npm npx; do
     path="$INSTALL_DIR/$name"
     if [ -x "$path" ]; then
       echo "  ✓ $name  →  $path"

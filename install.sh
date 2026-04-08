@@ -38,8 +38,15 @@ if [ -z "$NPM_BINARY" ]; then
   exit 1
 fi
 
+NPX_BINARY="$(command -v npx 2>/dev/null || true)"
+if [ -z "$NPX_BINARY" ]; then
+  echo "install: 'npx' not found on PATH - install Node.js first" >&2
+  exit 1
+fi
+
 echo "Using go binary:  $GO_BINARY"
 echo "Using npm binary: $NPM_BINARY"
+echo "Using npx binary: $NPX_BINARY"
 
 # --- Create synthetic GOROOT for IDE integration (e.g. GoLand) ---
 REAL_GOROOT="$("$GO_BINARY" env GOROOT)"
@@ -66,6 +73,7 @@ CONTAINER_RUNTIME=
 
 GO_BINARY="${GO_BINARY}"
 NPM_BINARY="${NPM_BINARY}"
+NPX_BINARY="${NPX_BINARY}"
 
 GODEV_IMAGE=golang:1.25
 GODEV_SYNTHETIC_GOROOT="${SYNTHETIC_GOROOT}"
@@ -88,7 +96,7 @@ chmod +x "$INSTALL_DIR/go"
 echo "Downloading npm/npx proxy..."
 curl -fsSL "$REPO_BASE_URL/npm-npx-proxy.sh" -o "$INSTALL_DIR/npm"
 chmod +x "$INSTALL_DIR/npm"
-cp "$INSTALL_DIR/npm" "$INSTALL_DIR/npx"
+ln -sf "$INSTALL_DIR/npm" "$INSTALL_DIR/npx"
 
 echo "Downloading devproxy manager..."
 curl -fsSL "$REPO_BASE_URL/devproxy.sh" -o "$INSTALL_DIR/devproxy"
