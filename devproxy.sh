@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # devproxy.sh — manages the containerised toolchain proxies
 # Usage: devproxy <command>
-#   list       Show installed proxies and their status
-#   update     Re-download and reinstall all proxy scripts
-#   uninstall  Remove all proxies and clean up the shell profile
-#   nuke       uninstall + delete ~/.devproxy (prompts for confirmation)
-#   enable     Comment out DEVPROXY_UNSECURE in ~/.devproxy (proxy active)
-#   disable    Uncomment DEVPROXY_UNSECURE in ~/.devproxy (bypass proxy)
+#   list            Show installed proxies and their status
+#   update          Re-download and reinstall all proxy scripts
+#   uninstall       Remove all proxies and clean up the shell profile
+#   nuke            uninstall + delete ~/.devproxy (prompts for confirmation)
+#   enable          Comment out DEVPROXY_UNSECURE in ~/.devproxy (proxy active)
+#   disable         Uncomment DEVPROXY_UNSECURE in ~/.devproxy (bypass proxy)
+#   go use <image>  Set GODEV_IMAGE in ~/.devproxy
+#   node use <image> Set NODEDEV_IMAGE in ~/.devproxy
 
 set -euo pipefail
 
@@ -217,6 +219,23 @@ cmd_go_use() {
   echo "GODEV_IMAGE set to ${image} in $cfg"
 }
 
+cmd_node_use() {
+  local image="${1:-}"
+  if [ -z "$image" ]; then
+    echo "Usage: devproxy node use <image>" >&2
+    echo "  e.g. devproxy node use node:22" >&2
+    exit 1
+  fi
+
+  local cfg="$HOME/.devproxy"
+  if [ ! -f "$cfg" ]; then
+    echo "devproxy: $cfg not found" >&2; exit 1
+  fi
+
+  sed -i.bak "s|^NODEDEV_IMAGE=.*|NODEDEV_IMAGE=${image}|" "$cfg" && rm -f "$cfg.bak"
+  echo "NODEDEV_IMAGE set to ${image} in $cfg"
+}
+
 cmd_enable() {
   local cfg="$HOME/.devproxy"
   if [ ! -f "$cfg" ]; then
@@ -263,6 +282,16 @@ case "${1:-}" in
         ;;
     esac
     ;;
+  node)
+    case "${2:-}" in
+      use) cmd_node_use "${3:-}" ;;
+      *)
+        echo "Usage: devproxy node <command>" >&2
+        echo "  use <image>          Set NODEDEV_IMAGE in ~/.devproxy" >&2
+        exit 1
+        ;;
+    esac
+    ;;
   *)
     echo "Usage: devproxy <command>"
     echo ""
@@ -276,6 +305,7 @@ case "${1:-}" in
     echo "  build <name> <ver> Build a devproxy image (e.g. build golang 1.25)"
     echo "  go use <image>     Set GODEV_IMAGE in ~/.devproxy (e.g. go use devproxy-golang:1.25)"
     echo "  go exec <binary>   Run a Linux binary inside the GODEV_IMAGE container"
+    echo "  node use <image>   Set NODEDEV_IMAGE in ~/.devproxy (e.g. node use node:22)"
     exit 1
     ;;
 esac
