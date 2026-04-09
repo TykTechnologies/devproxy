@@ -8,8 +8,10 @@
 #   nuke            uninstall + delete ~/.devproxy (prompts for confirmation)
 #   enable          Comment out DEVPROXY_UNSECURE in ~/.devproxy (proxy active)
 #   disable         Uncomment DEVPROXY_UNSECURE in ~/.devproxy (bypass proxy)
-#   go use <image>  Set GODEV_IMAGE in ~/.devproxy
-#   node use <image> Set NODEDEV_IMAGE in ~/.devproxy
+#   go use <image>   Set GODEV_IMAGE in ~/.devproxy
+#   go exec <binary> Run a Linux binary inside the GODEV_IMAGE container
+#   node use <image>  Set NODEDEV_IMAGE in ~/.devproxy
+#   node exec <cmd>    Run a command inside the NODEDEV_IMAGE container
 
 set -euo pipefail
 
@@ -245,6 +247,57 @@ cmd_node_use() {
   echo "NODEDEV_IMAGE set to ${image} in $cfg"
 }
 
+cmd_node_exec() {
+  # Collect -e KEY=VALUE flags before the command
+  local env_flags=()
+  while [ "${1:-}" = "-e" ]; do
+    shift
+    env_flags+=(--env "${1}")
+    shift
+  done
+
+  if [ "${#@}" -eq 0 ]; then
+    echo "Usage: devproxy node exec [-e KEY=VALUE]... <command> [args...]" >&2
+    echo "  e.g. devproxy node exec npm run build" >&2
+    echo "  e.g. devproxy node exec -e API_URL=http://localhost npx tsc --noEmit" >&2
+    exit 1
+  fi
+
+  local image="${NODEDEV_IMAGE:-}"
+  if [ -z "$image" ]; then
+    echo "devproxy: NODEDEV_IMAGE is not set - run the install script or set it in ~/.devproxy" >&2
+    exit 1
+  fi
+
+  local runtime="${CONTAINER_RUNTIME:-}"
+  if [ -z "$runtime" ]; then
+    if command -v podman &>/dev/null; then
+      runtime=podman
+    elif command -v docker &>/dev/null; then
+      runtime=docker
+    else
+      echo "devproxy: neither podman nor docker found" >&2
+      exit 1
+    fi
+  fi
+
+  local volopt=""
+  [ "$runtime" = "podman" ] && volopt=":z"
+
+  local tty_flag=""
+  [ -t 0 ] && tty_flag="--tty"
+
+  exec "$runtime" run --rm \
+    --interactive \
+    ${tty_flag} \
+    --network host \
+    --workdir "$(pwd)" \
+    --volume "$(pwd):$(pwd)${volopt}" \
+    "${env_flags[@]+"${env_flags[@]}"}" \
+    "$image" \
+    "$@"
+}
+
 cmd_enable() {
   local cfg="$HOME/.devproxy"
   if [ ! -f "$cfg" ]; then
@@ -294,10 +347,12 @@ case "${1:-}" in
     ;;
   node)
     case "${2:-}" in
-      use) cmd_node_use "${3:-}" ;;
+      use)  cmd_node_use "${3:-}" ;;
+      exec) cmd_node_exec "${@:3}" ;;
       *)
         echo "Usage: devproxy node <command>" >&2
-        echo "  use <image>          Set NODEDEV_IMAGE in ~/.devproxy" >&2
+        echo "  use <image>             Set NODEDEV_IMAGE in ~/.devproxy" >&2
+        echo "  exec <command> [args]   Run a command inside the NODEDEV_IMAGE container" >&2
         exit 1
         ;;
     esac
@@ -317,6 +372,7 @@ case "${1:-}" in
     echo "  go use <image>     Set GODEV_IMAGE in ~/.devproxy (e.g. go use devproxy-golang:1.25)"
     echo "  go exec <binary>   Run a Linux binary inside the GODEV_IMAGE container"
     echo "  node use <image>   Set NODEDEV_IMAGE in ~/.devproxy (e.g. node use node:22)"
+    echo "  node exec <cmd>    Run a command inside the NODEDEV_IMAGE container"
     exit 1
     ;;
 esac

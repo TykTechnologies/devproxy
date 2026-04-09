@@ -191,6 +191,8 @@ between invocations.
 | `NPX_BINARY` | *(set by installer)* | Path to the real `npx` binary on the host |
 | `CONTAINER_RUNTIME` | auto-detect | `podman` or `docker` |
 | `NODEDEV_IMAGE` | `node:24` | Container image used for all npm/npx commands |
+| `NODEDEV_OS` | *(host OS)* | Target OS for npm binary downloads (e.g. `darwin`, `linux`) |
+| `NODEDEV_ARCH` | *(host arch)* | Target CPU for npm binary downloads (e.g. `arm64`, `x64`) |
 | `NODEDEV_NPMRC` | *(unset)* | Set to `1` to enable private registry credentials |
 | `DEVPROXY_UNSECURE` | *(unset)* | Set to `1` to bypass the container entirely |
 
@@ -263,6 +265,24 @@ devproxy update
 ```
 
 Re-downloads and reinstalls all proxy scripts in-place without touching `~/.devproxy`.
+
+---
+
+### Running commands inside the Node container
+
+Use `devproxy node exec` to run any command inside the `NODEDEV_IMAGE` container with the
+current working directory mounted:
+
+```sh
+devproxy node exec npm run build
+devproxy node exec npx tsc --noEmit
+```
+
+Pass environment variables with `-e`:
+
+```sh
+devproxy node exec -e API_URL=http://localhost:3000 npm run dev
+```
 
 ---
 
