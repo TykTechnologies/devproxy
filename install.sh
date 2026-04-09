@@ -83,6 +83,7 @@ GODEV_SYNTHETIC_GOROOT="${SYNTHETIC_GOROOT}"
 NODEDEV_IMAGE=node:24
 # NODEDEV_OS=     # target OS for npm binary downloads: empty=linux, host/auto=detect host OS
 # NODEDEV_ARCH=   # target CPU for npm binary downloads: empty=container arch, host/auto=detect host CPU
+# NODEDEV_PORTS=  # comma-separated ports to publish (e.g. 3000:3000,8080:8080)
 # NODEDEV_NPMRC=1  # uncomment to mount ~/.npmrc into the container (private registries)
 EOF
   echo "Wrote config to $DEVPROXY_CONFIG"

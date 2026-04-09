@@ -248,18 +248,21 @@ cmd_node_use() {
 }
 
 cmd_node_exec() {
-  # Collect -e KEY=VALUE flags before the command
+  # Collect -e KEY=VALUE and -p HOST:CONTAINER flags before the command
   local env_flags=()
-  while [ "${1:-}" = "-e" ]; do
-    shift
-    env_flags+=(--env "${1}")
+  local port_flags=()
+  while [ "${1:-}" = "-e" ] || [ "${1:-}" = "-p" ]; do
+    case "${1}" in
+      -e) shift; env_flags+=(--env "${1}") ;;
+      -p) shift; port_flags+=(--publish "${1}") ;;
+    esac
     shift
   done
 
   if [ "${#@}" -eq 0 ]; then
-    echo "Usage: devproxy node exec [-e KEY=VALUE]... <command> [args...]" >&2
+    echo "Usage: devproxy node exec [-e KEY=VALUE]... [-p HOST:CONTAINER]... <command> [args...]" >&2
     echo "  e.g. devproxy node exec npm run build" >&2
-    echo "  e.g. devproxy node exec -e API_URL=http://localhost npx tsc --noEmit" >&2
+    echo "  e.g. devproxy node exec -p 3000:3000 -e API_URL=http://localhost npm run dev" >&2
     exit 1
   fi
 
@@ -293,6 +296,7 @@ cmd_node_exec() {
     --network host \
     --workdir "$(pwd)" \
     --volume "$(pwd):$(pwd)${volopt}" \
+    "${port_flags[@]+"${port_flags[@]}"}" \
     "${env_flags[@]+"${env_flags[@]}"}" \
     "$image" \
     "$@"

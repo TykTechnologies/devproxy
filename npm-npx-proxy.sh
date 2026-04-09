@@ -129,6 +129,15 @@ esac
 ENV_FLAGS+=(--env "npm_config_os=${_NODE_OS}")
 [ -n "$_NODE_ARCH" ] && ENV_FLAGS+=(--env "npm_config_cpu=${_NODE_ARCH}")
 
+# Build port publish flags from NODEDEV_PORTS (comma-separated, e.g. 3000:3000,8080:8080)
+PORT_FLAGS=()
+if [ -n "${NODEDEV_PORTS:-}" ]; then
+  IFS=',' read -ra _ports <<< "$NODEDEV_PORTS"
+  for _port in "${_ports[@]}"; do
+    PORT_FLAGS+=(--publish "$_port")
+  done
+fi
+
 exec "$RUNTIME" run --rm \
   --interactive \
   ${TTY_FLAG} \
@@ -137,6 +146,7 @@ exec "$RUNTIME" run --rm \
   --volume "${HOST_NPM_CACHE}:${HOST_NPM_CACHE}${RUNTIME_VOLOPT}" \
   "${NPMRC_FLAG[@]+"${NPMRC_FLAG[@]}"}" \
   "${ENV_FLAGS[@]+"${ENV_FLAGS[@]}"}" \
+  "${PORT_FLAGS[@]+"${PORT_FLAGS[@]}"}" \
   --env NPM_CONFIG_CACHE="${HOST_NPM_CACHE}" \
   --security-opt no-new-privileges \
   "$NODE_IMAGE" \
