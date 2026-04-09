@@ -97,6 +97,29 @@ ENV_FLAGS=()
 [ -n "${NODE_ENV:-}" ] && ENV_FLAGS+=(--env "NODE_ENV=${NODE_ENV}")
 [ -n "${CI:-}" ]       && ENV_FLAGS+=(--env "CI=${CI}")
 
+# Determine target platform for npm binary resolution.
+# Defaults to the host OS/arch so packages install macOS-native binaries on macOS.
+# Override via NODEDEV_OS / NODEDEV_ARCH in ~/.devproxy to target a different platform.
+_NODE_OS="${NODEDEV_OS:-}"
+if [ -z "$_NODE_OS" ]; then
+  case "$(uname -s)" in
+    Darwin) _NODE_OS=darwin ;;
+    *)      _NODE_OS=linux  ;;
+  esac
+fi
+
+_NODE_ARCH="${NODEDEV_ARCH:-}"
+if [ -z "$_NODE_ARCH" ]; then
+  case "$(uname -m)" in
+    x86_64)        _NODE_ARCH=x64   ;;
+    arm64|aarch64) _NODE_ARCH=arm64 ;;
+    *)             _NODE_ARCH=x64   ;;
+  esac
+fi
+
+ENV_FLAGS+=(--env "npm_config_os=${_NODE_OS}")
+ENV_FLAGS+=(--env "npm_config_cpu=${_NODE_ARCH}")
+
 exec "$RUNTIME" run --rm \
   --interactive \
   ${TTY_FLAG} \
