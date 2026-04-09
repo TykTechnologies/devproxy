@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # devproxy.sh — manages the containerised toolchain proxies
 # Usage: devproxy <command>
+#   status          Show whether the proxy is ENABLED or DISABLED
 #   list            Show installed proxies and their status
 #   update          Re-download and reinstall all proxy scripts
 #   uninstall       Remove all proxies and clean up the shell profile
@@ -26,6 +27,14 @@ detect_profile() {
     */bash) echo "$HOME/.bashrc" ;;
     *)      echo "$HOME/.profile" ;;
   esac
+}
+
+cmd_status() {
+  if [ -n "${DEVPROXY_UNSECURE:-}" ]; then
+    echo "devproxy: DISABLED"
+  else
+    echo "devproxy: ENABLED"
+  fi
 }
 
 cmd_list() {
@@ -263,6 +272,7 @@ cmd_disable() {
 }
 
 case "${1:-}" in
+  status)    cmd_status ;;
   list)      cmd_list ;;
   update)    cmd_update ;;
   uninstall) cmd_uninstall ;;
@@ -296,6 +306,7 @@ case "${1:-}" in
     echo "Usage: devproxy <command>"
     echo ""
     echo "Commands:"
+    echo "  status             Show whether the proxy is ENABLED or DISABLED"
     echo "  list               Show installed proxies and their status"
     echo "  update             Re-download and reinstall all proxy scripts"
     echo "  uninstall          Remove all proxies and clean up the shell profile"
