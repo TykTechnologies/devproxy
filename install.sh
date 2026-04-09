@@ -78,6 +78,7 @@ NPX_BINARY="${NPX_BINARY}"
 GODEV_IMAGE=golang:1.25
 GODEV_SYNTHETIC_GOROOT="${SYNTHETIC_GOROOT}"
 # GODEV_EXTRA_VOLUMES= # uncomment to provide a list of directories to be mounted (colon-separated)
+# GODEV_PORTS=         # comma-separated ports to publish (e.g. 8080:8080,9090:9090)
 # GODEV_NETRC=1  # uncomment to mount ~/.netrc into the container (private modules)
 
 NODEDEV_IMAGE=node:24

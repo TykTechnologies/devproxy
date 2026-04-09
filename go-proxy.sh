@@ -99,6 +99,15 @@ if [ -n "${GODEV_EXTRA_VOLUMES:-}" ]; then
   done
 fi
 
+# Build port publish flags from GODEV_PORTS (comma-separated, e.g. 8080:8080,9090:9090)
+PORT_FLAGS=()
+if [ -n "${GODEV_PORTS:-}" ]; then
+  IFS=',' read -ra _ports <<< "$GODEV_PORTS"
+  for _port in "${_ports[@]}"; do
+    PORT_FLAGS+=(--publish "$_port")
+  done
+fi
+
 # Auto-mount directories referenced by -modfile so IDEs (e.g. GoLand) that pass
 # an absolute project path without running from the project directory still work.
 for _arg in "$@"; do
@@ -118,6 +127,7 @@ exec "$RUNTIME" run --rm \
   --volume "${HOST_GOPATH}:${HOST_GOPATH}${RUNTIME_VOLOPT}" \
   "${NETRC_FLAG[@]+"${NETRC_FLAG[@]}"}" \
   "${EXTRA_VOL_FLAGS[@]+"${EXTRA_VOL_FLAGS[@]}"}" \
+  "${PORT_FLAGS[@]+"${PORT_FLAGS[@]}"}" \
   --env GOPATH="${HOST_GOPATH}" \
   --env GOFLAGS="$("$GO_BINARY" env GOFLAGS) -buildvcs=false" \
   --env CGO_ENABLED="$("$GO_BINARY" env CGO_ENABLED)" \

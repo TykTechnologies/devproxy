@@ -46,6 +46,7 @@ container.
 | `CONTAINER_RUNTIME` | auto-detect | `podman` or `docker` |
 | `GODEV_IMAGE` | `golang:1.25` | Container image used for all go commands |
 | `GODEV_EXTRA_VOLUMES` | *(unset)* | Colon-separated list of extra host paths to mount |
+| `GODEV_PORTS` | *(unset)* | Comma-separated ports to publish (e.g. `8080:8080,9090:9090`) |
 | `GODEV_NETRC` | *(unset)* | Set to `1` to enable private module credentials |
 | `DEVPROXY_UNSECURE` | *(unset)* | Set to `1` to bypass the container entirely |
 
@@ -137,11 +138,19 @@ go build -o ./myapp .
 devproxy go exec ./myapp --flag value
 ```
 
-Pass environment variables with `-e`:
+Pass environment variables with `-e` and publish ports with `-p`:
 
 ```sh
-devproxy go exec -e DB_HOST=host.docker.internal -e PORT=8080 ./myapp
+devproxy go exec -p 8080:8080 -e DB_HOST=host.docker.internal ./myapp
 ```
+
+To always publish ports without passing `-p` each time, set `GODEV_PORTS` in `~/.devproxy`:
+
+```sh
+GODEV_PORTS=8080:8080
+```
+
+This also applies to all `go run` invocations through the proxy.
 
 The container uses `--network host` so `localhost` resolves to the host network (note: on
 macOS with Docker Desktop or Podman, use `host.docker.internal` / `host.containers.internal`
@@ -193,6 +202,7 @@ between invocations.
 | `NODEDEV_IMAGE` | `node:24` | Container image used for all npm/npx commands |
 | `NODEDEV_OS` | `linux` | Target OS for npm binary downloads; set to `host` or `auto` to detect the host OS |
 | `NODEDEV_ARCH` | *(container arch)* | Target CPU for npm binary downloads; set to `host` or `auto` to detect the host CPU |
+| `NODEDEV_PORTS` | *(unset)* | Comma-separated ports to publish (e.g. `3000:3000,8080:8080`) |
 | `NODEDEV_NPMRC` | *(unset)* | Set to `1` to enable private registry credentials |
 | `DEVPROXY_UNSECURE` | *(unset)* | Set to `1` to bypass the container entirely |
 
@@ -278,10 +288,17 @@ devproxy node exec npm run build
 devproxy node exec npx tsc --noEmit
 ```
 
-Pass environment variables with `-e`:
+Pass environment variables with `-e` and publish ports with `-p`:
 
 ```sh
-devproxy node exec -e API_URL=http://localhost:3000 npm run dev
+devproxy node exec -p 3000:3000 -e API_URL=http://localhost npm run dev
+```
+
+To always publish ports when running `npm` or `npx` directly (e.g. `npm run dev`), set
+`NODEDEV_PORTS` in `~/.devproxy`:
+
+```sh
+NODEDEV_PORTS=3000:3000
 ```
 
 ---

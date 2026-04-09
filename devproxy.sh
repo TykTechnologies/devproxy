@@ -153,18 +153,21 @@ cmd_build() {
 }
 
 cmd_go_exec() {
-  # Collect -e KEY=VALUE flags before the binary argument
+  # Collect -e KEY=VALUE and -p HOST:CONTAINER flags before the binary argument
   local env_flags=()
-  while [ "${1:-}" = "-e" ]; do
-    shift
-    env_flags+=(--env "${1}")
+  local port_flags=()
+  while [ "${1:-}" = "-e" ] || [ "${1:-}" = "-p" ]; do
+    case "${1}" in
+      -e) shift; env_flags+=(--env "${1}") ;;
+      -p) shift; port_flags+=(--publish "${1}") ;;
+    esac
     shift
   done
 
   local binary="${1:-}"
   if [ -z "$binary" ]; then
-    echo "Usage: devproxy go exec [-e KEY=VALUE]... <binary> [args...]" >&2
-    echo "  e.g. devproxy go exec -e DB_HOST=host.docker.internal ./my_binary" >&2
+    echo "Usage: devproxy go exec [-e KEY=VALUE]... [-p HOST:CONTAINER]... <binary> [args...]" >&2
+    echo "  e.g. devproxy go exec -p 8080:8080 -e DB_HOST=host.docker.internal ./my_binary" >&2
     exit 1
   fi
 
@@ -208,6 +211,7 @@ cmd_go_exec() {
     --workdir "$(pwd)" \
     --volume "$(pwd):$(pwd)${volopt}" \
     --volume "${abs_binary}:${abs_binary}${volopt}" \
+    "${port_flags[@]+"${port_flags[@]}"}" \
     "${env_flags[@]+"${env_flags[@]}"}" \
     "$image" \
     "$abs_binary" "${@:2}"
