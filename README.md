@@ -191,8 +191,8 @@ between invocations.
 | `NPX_BINARY` | *(set by installer)* | Path to the real `npx` binary on the host |
 | `CONTAINER_RUNTIME` | auto-detect | `podman` or `docker` |
 | `NODEDEV_IMAGE` | `node:24` | Container image used for all npm/npx commands |
-| `NODEDEV_OS` | *(host OS)* | Target OS for npm binary downloads (e.g. `darwin`, `linux`) |
-| `NODEDEV_ARCH` | *(host arch)* | Target CPU for npm binary downloads (e.g. `arm64`, `x64`) |
+| `NODEDEV_OS` | `linux` | Target OS for npm binary downloads; set to `host` or `auto` to detect the host OS |
+| `NODEDEV_ARCH` | *(container arch)* | Target CPU for npm binary downloads; set to `host` or `auto` to detect the host CPU |
 | `NODEDEV_NPMRC` | *(unset)* | Set to `1` to enable private registry credentials |
 | `DEVPROXY_UNSECURE` | *(unset)* | Set to `1` to bypass the container entirely |
 

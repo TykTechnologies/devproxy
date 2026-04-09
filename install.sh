@@ -81,8 +81,8 @@ GODEV_SYNTHETIC_GOROOT="${SYNTHETIC_GOROOT}"
 # GODEV_NETRC=1  # uncomment to mount ~/.netrc into the container (private modules)
 
 NODEDEV_IMAGE=node:24
-# NODEDEV_OS=     # override target OS for npm binary downloads (default: host OS, e.g. darwin)
-# NODEDEV_ARCH=   # override target CPU for npm binary downloads (default: host arch, e.g. arm64)
+# NODEDEV_OS=     # target OS for npm binary downloads: empty=linux, host/auto=detect host OS
+# NODEDEV_ARCH=   # target CPU for npm binary downloads: empty=container arch, host/auto=detect host CPU
 # NODEDEV_NPMRC=1  # uncomment to mount ~/.npmrc into the container (private registries)
 EOF
   echo "Wrote config to $DEVPROXY_CONFIG"
