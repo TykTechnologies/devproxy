@@ -25,8 +25,12 @@ if [ -n "${DEVPROXY_UNSECURE:-}" ]; then
 fi
 
 # --- Local passthrough for safe, read-only subcommands ---
+# list: used heavily by gopls/IDEs to resolve package and stdlib file paths — returns
+#       host-relative paths so editors can open files. Any module downloads triggered
+#       internally are pure fetch operations; no code executes until build/run/test.
+# doc:  read-only documentation lookup, no code execution.
 case "${1:-}" in
-  env|help)
+  env|help|list|doc)
     exec "$GO_BINARY" "$@"
     ;;
 esac
