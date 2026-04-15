@@ -207,7 +207,6 @@ cmd_go_exec() {
   exec "$runtime" run --rm \
     --interactive \
     ${tty_flag} \
-    --network host \
     --workdir "$(pwd)" \
     --volume "$(pwd):$(pwd)${volopt}" \
     --volume "${abs_binary}:${abs_binary}${volopt}" \
@@ -297,7 +296,6 @@ cmd_node_exec() {
   exec "$runtime" run --rm \
     --interactive \
     ${tty_flag} \
-    --network host \
     --workdir "$(pwd)" \
     --volume "$(pwd):$(pwd)${volopt}" \
     "${port_flags[@]+"${port_flags[@]}"}" \
