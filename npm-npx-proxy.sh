@@ -34,6 +34,10 @@ case "$_TOOL" in
     ;;
 esac
 
+# npm/npx are Node.js scripts — prepend their bin dir so `node` is always findable,
+# regardless of which nvm version is currently active in the user's shell.
+PATH="$(dirname "$_REAL_BINARY"):$PATH"
+
 # --- Unsecure mode: bypass the container entirely ---
 if [ -n "${DEVPROXY_UNSECURE:-}" ]; then
   exec "$_REAL_BINARY" "$@"

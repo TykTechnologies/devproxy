@@ -61,7 +61,11 @@ echo "Created synthetic GOROOT at $SYNTHETIC_GOROOT"
 # --- Write ~/.devproxy config file (only on first install) ---
 DEVPROXY_CONFIG="$HOME/.devproxy"
 if [ -f "$DEVPROXY_CONFIG" ]; then
-  echo "Config already exists at $DEVPROXY_CONFIG - leaving it unchanged"
+  # Update only binary paths — preserve all other user config
+  sed -i '' "s|^GO_BINARY=.*|GO_BINARY=\"${GO_BINARY}\"|"   "$DEVPROXY_CONFIG"
+  sed -i '' "s|^NPM_BINARY=.*|NPM_BINARY=\"${NPM_BINARY}\"|" "$DEVPROXY_CONFIG"
+  sed -i '' "s|^NPX_BINARY=.*|NPX_BINARY=\"${NPX_BINARY}\"|" "$DEVPROXY_CONFIG"
+  echo "Updated binary paths in $DEVPROXY_CONFIG"
 else
   cat > "$DEVPROXY_CONFIG" <<EOF
 # devproxy configuration - managed by install.sh
